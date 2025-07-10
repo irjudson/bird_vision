@@ -10,7 +10,7 @@ on:
     - cron: '0 2 * * *'
 
 env:
-  PYTHON_VERSION: "3.9"
+  PYTHON_VERSION: "3.10"
   PYTORCH_VERSION: "2.0.0"
 
 jobs:
@@ -26,30 +26,42 @@ jobs:
       with:
         python-version: ${{ env.PYTHON_VERSION }}
     
-    - name: Cache dependencies
+    - name: Cache virtual environment
       uses: actions/cache@v3
       with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+        path: venv
+        key: ${{ runner.os }}-${{ env.PYTHON_VERSION }}-venv-${{ hashFiles('**/pyproject.toml') }}
         restore-keys: |
-          ${{ runner.os }}-pip-
+          ${{ runner.os }}-${{ env.PYTHON_VERSION }}-venv-
     
-    - name: Install dependencies
+    - name: Create virtual environment and install dependencies
       run: |
+        python -m venv venv
+        source venv/bin/activate
         python -m pip install --upgrade pip
         pip install -e ".[dev]"
+        echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/venv" >> $GITHUB_ENV
+        echo "$GITHUB_WORKSPACE/venv/bin" >> $GITHUB_PATH
     
     - name: Run black (code formatting)
-      run: black --check src/ tests/
+      run: |
+        source venv/bin/activate
+        black --check src/ tests/
     
     - name: Run isort (import sorting)
-      run: isort --check-only src/ tests/
+      run: |
+        source venv/bin/activate
+        isort --check-only src/ tests/
     
     - name: Run flake8 (linting)
-      run: flake8 src/ tests/ --max-line-length=88 --extend-ignore=E203,W503
+      run: |
+        source venv/bin/activate
+        flake8 src/ tests/ --max-line-length=88 --extend-ignore=E203,W503
     
     - name: Run mypy (type checking)
-      run: mypy src/bird_vision --ignore-missing-imports
+      run: |
+        source venv/bin/activate
+        mypy src/bird_vision --ignore-missing-imports
 
   unit-tests:
     runs-on: ${{ matrix.os }}
@@ -74,13 +86,13 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     
-    - name: Cache dependencies
+    - name: Cache virtual environment
       uses: actions/cache@v3
       with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-${{ matrix.python-version }}-pip-${{ hashFiles('**/pyproject.toml') }}
+        path: venv
+        key: ${{ runner.os }}-${{ matrix.python-version }}-venv-${{ hashFiles('**/pyproject.toml') }}
         restore-keys: |
-          ${{ runner.os }}-${{ matrix.python-version }}-pip-
+          ${{ runner.os }}-${{ matrix.python-version }}-venv-
     
     - name: Install system dependencies (Ubuntu)
       if: matrix.os == 'ubuntu-latest'
@@ -93,17 +105,28 @@ jobs:
       run: |
         brew install libsndfile ffmpeg
     
-    - name: Install Python dependencies
+    - name: Create virtual environment and install dependencies
       run: |
+        python -m venv venv
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          source venv/Scripts/activate
+        else
+          source venv/bin/activate
+        fi
         python -m pip install --upgrade pip
         pip install -e ".[dev]"
     
     - name: Run unit tests
       run: |
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          source venv/Scripts/activate
+        else
+          source venv/bin/activate
+        fi
         pytest tests/unit/ -v --cov=bird_vision --cov-report=xml --cov-report=term-missing
     
     - name: Upload coverage to Codecov
-      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.9'
+      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.10'
       uses: codecov/codecov-action@v3
       with:
         file: ./coverage.xml

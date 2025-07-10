@@ -47,9 +47,31 @@ tests/
 
 ## Running Tests
 
+### Prerequisites
+
+**Always ensure your virtual environment is activated before running tests:**
+
+```bash
+# Activate virtual environment (Linux/macOS)
+source venv/bin/activate
+
+# Activate virtual environment (Windows)
+venv\Scripts\activate
+
+# Verify activation (should show path to venv)
+which python  # Linux/macOS
+where python   # Windows
+
+# Verify Bird Vision is installed
+python -c "import bird_vision; print('Ready for testing!')"
+```
+
 ### Quick Start
 
 ```bash
+# Ensure virtual environment is activated first
+source venv/bin/activate  # or venv\Scripts\activate on Windows
+
 # Run all tests
 python scripts/run_tests.py
 
@@ -66,9 +88,27 @@ python scripts/run_tests.py --verbose
 python scripts/run_tests.py --skip-slow
 ```
 
+### Environment Setup for Testing
+
+If you haven't set up your environment yet:
+
+```bash
+# Quick setup using the provided script
+./scripts/setup_env.sh  # Linux/macOS
+scripts\setup_env.bat   # Windows
+
+# Manual setup
+python -m venv venv
+source venv/bin/activate  # or venv\Scripts\activate
+pip install -e ".[dev]"
+```
+
 ### Using pytest directly
 
 ```bash
+# Ensure virtual environment is activated
+source venv/bin/activate  # or venv\Scripts\activate on Windows
+
 # Run all tests
 pytest
 
@@ -90,12 +130,24 @@ pytest -m "integration"
 
 ### Docker Testing
 
+The Docker environment includes a pre-configured virtual environment:
+
 ```bash
-# Build test image
+# Build test image (includes virtual environment)
 docker build -f docker/Dockerfile -t bird-vision-test .
 
-# Run tests in container
+# Run tests in container (virtual environment auto-activated)
 docker run --rm bird-vision-test python scripts/run_tests.py
+
+# Run specific test categories in Docker
+docker run --rm bird-vision-test python scripts/run_tests.py --unit-only
+docker run --rm bird-vision-test python scripts/run_tests.py --integration-only
+
+# Interactive testing session with mounted source
+docker run --rm -it \
+  -v $(pwd)/src:/app/src \
+  -v $(pwd)/tests:/app/tests \
+  bird-vision-test bash
 ```
 
 ## Test Categories
@@ -439,22 +491,68 @@ def test_performance_target(benchmark):
 
 ### Common Test Issues
 
+#### Virtual Environment Issues
+```bash
+# Virtual environment not activated
+source venv/bin/activate  # Linux/macOS
+venv\Scripts\activate     # Windows
+
+# Verify you're in the right environment
+which python  # Should point to venv/bin/python
+pip list | grep bird-vision  # Should show the package
+
+# Virtual environment corrupted - recreate it
+deactivate
+rm -rf venv/
+python -m venv venv
+source venv/bin/activate
+pip install -e ".[dev]"
+```
+
 #### Import Errors
 ```bash
+# Ensure virtual environment is activated first
+source venv/bin/activate
+
 # Ensure package is installed in development mode
 pip install -e .
 
-# Check Python path
+# Check Python path (should be in venv)
 python -c "import bird_vision; print(bird_vision.__file__)"
+
+# If import fails, reinstall in virtual environment
+pip uninstall bird-vision
+pip install -e ".[dev]"
 ```
 
 #### Missing Dependencies
 ```bash
+# Always activate virtual environment first
+source venv/bin/activate
+
 # Install all test dependencies
 pip install -e ".[dev]"
 
 # Install platform-specific dependencies
 pip install -e ".[esp32]"  # For ESP32 tests
+
+# Update dependencies if pyproject.toml changed
+pip install -e ".[dev]" --upgrade
+```
+
+#### Environment Confusion
+```bash
+# Multiple Python installations causing issues
+which python3  # Check which Python you're using
+python --version  # Verify version
+
+# Clear pip cache if needed
+pip cache purge
+
+# Use specific Python version
+python3.10 -m venv venv
+source venv/bin/activate
+pip install -e ".[dev]"
 ```
 
 #### GPU Tests Failing

@@ -21,21 +21,81 @@ The project uses the [NABirds dataset](https://datasets.activeloop.ai/docs/ml/da
 
 ## Installation
 
-1. Clone the repository:
+### Prerequisites
+- Python 3.9+ (recommended: Python 3.10 or 3.11)
+- Git
+
+### Setup with Virtual Environment (Recommended)
+
+1. **Clone the repository:**
 ```bash
 git clone <repository-url>
 cd bird_vision
 ```
 
-2. Install in development mode:
+2. **Create and activate a virtual environment:**
+
+**Using venv (recommended):**
 ```bash
-pip install -e ".[dev,audio]"
+# Create virtual environment
+python -m venv venv
+
+# Activate virtual environment
+# On Linux/macOS:
+source venv/bin/activate
+# On Windows:
+venv\Scripts\activate
+
+# Verify activation (should show path to venv)
+which python
 ```
 
-3. Install pre-commit hooks:
+**Using conda:**
 ```bash
-pre-commit install
+# Create conda environment
+conda create -n bird_vision python=3.10
+conda activate bird_vision
 ```
+
+3. **Install the package with dependencies:**
+```bash
+# Basic installation
+pip install -e .
+
+# Development installation (includes testing, linting, etc.)
+pip install -e ".[dev]"
+
+# Full installation (includes ESP32 support)
+pip install -e ".[dev,esp32]"
+```
+
+4. **Verify installation:**
+```bash
+# Test CLI availability
+bird-vision --help
+
+# Test package import
+python -c "import bird_vision; print('Installation successful!')"
+```
+
+### Alternative: Quick Setup Script
+
+For convenience, you can use the setup script:
+```bash
+# Make setup script executable and run
+chmod +x scripts/setup_env.sh
+./scripts/setup_env.sh
+```
+
+### Important Notes
+- **Always activate your virtual environment** before working on the project
+- **Deactivate** when done: `deactivate` (venv) or `conda deactivate` (conda)
+- **Regenerate environment** if you encounter dependency issues:
+  ```bash
+  deactivate
+  rm -rf venv/  # or conda remove -n bird_vision --all
+  # Then repeat setup steps
+  ```
 
 ## Quick Start
 
@@ -178,8 +238,23 @@ Default performance targets:
 
 ## Development
 
+### Environment Setup for Development
+
+**Always ensure your virtual environment is activated before development:**
+```bash
+# Activate virtual environment
+source venv/bin/activate  # or conda activate bird_vision
+
+# Verify you're in the right environment
+which python  # Should point to venv/bin/python
+pip list | grep bird-vision  # Should show the package
+```
+
 ### Running Tests
 ```bash
+# Ensure virtual environment is activated first!
+source venv/bin/activate
+
 # Run all tests
 python scripts/run_tests.py
 
@@ -205,31 +280,103 @@ pytest --cov=bird_vision --cov-report=html
 
 See [TESTING.md](TESTING.md) for comprehensive testing documentation.
 
-### Code Formatting
+### Code Quality Tools
 ```bash
+# Ensure virtual environment is activated
+source venv/bin/activate
+
+# Format code
 black src/ tests/
 isort src/ tests/
-```
 
-### Type Checking
-```bash
+# Type checking
 mypy src/
+
+# Linting
+flake8 src/ tests/
+
+# Run all quality checks
+python scripts/run_tests.py --quality-only
 ```
 
-### Pre-commit Hooks
-```bash
-pre-commit run --all-files
-```
+### Development Workflow
+1. **Start development session:**
+   ```bash
+   cd bird_vision
+   source venv/bin/activate  # Activate environment
+   ```
+
+2. **Make changes and test:**
+   ```bash
+   # Edit code...
+   python scripts/run_tests.py --unit-only  # Quick feedback
+   ```
+
+3. **Before committing:**
+   ```bash
+   # Run full test suite
+   python scripts/run_tests.py
+   
+   # Format and lint
+   black src/ tests/
+   isort src/ tests/
+   flake8 src/ tests/
+   ```
+
+4. **End development session:**
+   ```bash
+   deactivate  # Deactivate virtual environment
+   ```
 
 ## Docker Support
 
-Build and run with Docker:
+The Docker image uses a virtual environment internally for isolation and best practices.
+
+### Build and Run with Docker
+
 ```bash
-# Build image
+# Build image (includes development dependencies and virtual environment)
 docker build -t bird-vision -f docker/Dockerfile .
 
-# Run training
-docker run --gpus all -v $(pwd)/data:/app/data bird-vision python scripts/train_model.py
+# Run CLI help
+docker run --rm bird-vision
+
+# Run training with GPU support and data volume
+docker run --rm --gpus all \
+  -v $(pwd)/data:/app/data \
+  -v $(pwd)/models:/app/models \
+  bird-vision python scripts/train_model.py
+
+# Run tests in container
+docker run --rm bird-vision python scripts/run_tests.py --unit-only
+
+# Interactive development session
+docker run --rm -it \
+  -v $(pwd)/src:/app/src \
+  -v $(pwd)/tests:/app/tests \
+  bird-vision bash
+```
+
+### Docker Environment Details
+- **Base Image**: Python 3.10-slim
+- **Virtual Environment**: `/opt/venv` (automatically activated)
+- **Working Directory**: `/app`
+- **User**: non-root user `bird_vision`
+- **Dependencies**: Development dependencies included for testing
+
+### Multi-stage Docker Build (Production)
+
+For production deployments, you can create a smaller image:
+
+```dockerfile
+# Example production Dockerfile
+FROM bird-vision as builder
+# ... copy only necessary files
+
+FROM python:3.10-slim as production
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+# ... production configuration
 ```
 
 ## Future Enhancements
@@ -242,12 +389,67 @@ docker run --gpus all -v $(pwd)/data:/app/data bird-vision python scripts/train_
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Run the test suite
-6. Submit a pull request
+### Development Setup
+
+1. **Fork and clone the repository:**
+   ```bash
+   git clone https://github.com/YOUR_USERNAME/bird_vision.git
+   cd bird_vision
+   ```
+
+2. **Set up virtual environment:**
+   ```bash
+   # Quick setup
+   ./scripts/setup_env.sh  # Linux/macOS
+   scripts\setup_env.bat   # Windows
+   
+   # Or manual setup
+   python -m venv venv
+   source venv/bin/activate  # Linux/macOS
+   # venv\Scripts\activate   # Windows
+   pip install -e ".[dev]"
+   ```
+
+3. **Create a feature branch:**
+   ```bash
+   git checkout -b feature-name
+   ```
+
+4. **Make your changes and test:**
+   ```bash
+   # Always ensure virtual environment is activated
+   source venv/bin/activate
+   
+   # Run tests during development
+   python scripts/run_tests.py --unit-only
+   
+   # Run full test suite before committing
+   python scripts/run_tests.py
+   ```
+
+5. **Code quality checks:**
+   ```bash
+   # Format and lint code
+   black src/ tests/
+   isort src/ tests/
+   flake8 src/ tests/
+   mypy src/
+   ```
+
+6. **Submit a pull request with:**
+   - Clear description of changes
+   - Tests for new functionality
+   - Updated documentation if needed
+   - All tests passing
+
+### Development Guidelines
+
+- **Always use virtual environments** for development
+- **Write tests** for new features and bug fixes
+- **Follow code style** (Black, isort, flake8)
+- **Add type hints** where appropriate
+- **Update documentation** for user-facing changes
+- **Test across platforms** when possible
 
 ## License
 
