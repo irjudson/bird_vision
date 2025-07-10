@@ -1,0 +1,97 @@
+target_platform: esp32_p4_eye
+
+esp32_p4:
+  device: "ESP32-P4-EYE"
+  ai_accelerator: true
+  memory_psram: 32  # MB
+  memory_flash: 16  # MB
+  camera:
+    resolution: [640, 480]
+    format: "RGB565"
+    fps: 15
+  
+  optimization:
+    target_framework: "esp_dl"
+    quantization: "int8"
+    input_layout: "NHWC" 
+    use_ai_accelerator: true
+    memory_optimization: true
+    
+  model_constraints:
+    max_model_size_mb: 8
+    max_inference_time_ms: 200
+    min_accuracy_retention: 0.90
+    input_size: [224, 224]
+    
+preprocessing:
+  input_size: [224, 224]
+  mean: [123.675, 116.28, 103.53]  # RGB mean for ESP-DL
+  std: [58.395, 57.12, 57.375]     # RGB std for ESP-DL
+  format: "RGB"
+  normalize_range: [0, 255]        # ESP32 typically works with 0-255 range
+  
+postprocessing:
+  output_format: "logits"
+  top_k: 3
+  confidence_threshold: 0.5
+  softmax_temperature: 1.0
+
+esp_dl:
+  version: "latest"
+  quantization:
+    scheme: "per_tensor_symmetric"
+    calibration_method: "percentile"
+    percentile: 99.99
+  
+  layer_fusion:
+    conv_bn_fusion: true
+    conv_relu_fusion: true
+    
+  memory_management:
+    use_external_psram: true
+    optimize_for_memory: true
+    enable_model_caching: false
+
+firmware:
+  esp_idf_version: "v5.1"
+  components:
+    - "esp-dl"
+    - "esp32-camera" 
+    - "wifi"
+    - "spiffs"
+  
+  wifi:
+    enable_ota: true
+    enable_web_server: true
+    enable_mqtt: false
+    
+  camera_config:
+    pin_pwdn: -1
+    pin_reset: -1
+    pin_xclk: 15
+    pin_sscb_sda: 4
+    pin_sscb_scl: 5
+    pins:
+      d0: 11
+      d1: 9
+      d2: 8
+      d3: 10
+      d4: 12
+      d5: 18
+      d6: 17
+      d7: 16
+      vsync: 6
+      href: 7
+      pclk: 13
+
+deployment:
+  output_format: "esp_dl"
+  include_firmware: true
+  generate_flash_script: true
+  
+metadata:
+  model_name: "BirdClassifierESP32"
+  model_version: "1.0.0"
+  author: "Bird Vision Team"
+  description: "ESP32-P4-Eye bird species classifier with AI acceleration"
+  license: "MIT"

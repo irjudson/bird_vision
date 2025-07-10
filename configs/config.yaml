@@ -1,0 +1,32 @@
+defaults:
+  - data: nabirds
+  - model: efficientnet_v2
+  - training: default
+  - compression: default
+  - deployment: mobile
+  - _self_
+
+project:
+  name: bird_vision
+  version: 0.1.0
+  description: Multi-modal bird identification system
+  
+experiment:
+  name: ${now:%Y-%m-%d_%H-%M-%S}
+  tags: []
+  notes: ""
+  
+logging:
+  level: INFO
+  use_wandb: false
+  use_mlflow: true
+  log_artifacts: true
+  
+paths:
+  data_dir: ./data
+  models_dir: ./models
+  logs_dir: ./logs
+  artifacts_dir: ./artifacts
+  
+device: auto  # auto, cpu, cuda, mps
+seed: 42

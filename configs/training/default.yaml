@@ -1,0 +1,36 @@
+max_epochs: 100
+patience: 15
+min_delta: 0.001
+
+checkpointing:
+  monitor: "val_accuracy"
+  mode: "max"
+  save_top_k: 3
+  save_last: true
+  filename: "epoch_{epoch:02d}_val_acc_{val_accuracy:.3f}"
+
+early_stopping:
+  monitor: "val_accuracy"
+  mode: "max"
+  patience: 15
+  min_delta: 0.001
+
+gradient_clipping:
+  enabled: true
+  max_norm: 1.0
+
+mixed_precision:
+  enabled: true
+  precision: 16
+
+validation:
+  check_val_every_n_epoch: 1
+  val_check_interval: 1.0
+
+logging:
+  log_every_n_steps: 50
+  log_grad_norm: true
+  log_model_summary: true
+
+accumulate_grad_batches: 1
+sync_batchnorm: false

@@ -1,0 +1,37 @@
+_target_: bird_vision.models.vision_model.VisionModel
+
+backbone:
+  name: "efficientnetv2_m"
+  pretrained: true
+  features_only: false
+  drop_rate: 0.2
+  drop_path_rate: 0.2
+
+head:
+  type: "classification"
+  num_classes: 400
+  dropout: 0.3
+  hidden_dim: 512
+
+optimizer:
+  _target_: torch.optim.AdamW
+  lr: 0.001
+  weight_decay: 0.05
+  betas: [0.9, 0.999]
+
+scheduler:
+  _target_: torch.optim.lr_scheduler.CosineAnnealingWarmRestarts
+  T_0: 10
+  T_mult: 2
+  eta_min: 1e-6
+
+loss:
+  _target_: torch.nn.CrossEntropyLoss
+  label_smoothing: 0.1
+
+metrics:
+  - accuracy
+  - top_5_accuracy
+  - f1_macro
+  - precision_macro
+  - recall_macro

@@ -1,0 +1,34 @@
+target_platform: mobile
+
+ios:
+  model_format: coreml
+  deployment_target: "14.0"
+  optimize_for_size: true
+  
+android:
+  model_format: tflite
+  api_level: 24
+  delegate: "gpu"  # gpu, nnapi, xnnpack
+  
+preprocessing:
+  input_size: [224, 224]
+  mean: [0.485, 0.456, 0.406]
+  std: [0.229, 0.224, 0.225]
+  format: "RGB"
+  
+postprocessing:
+  output_format: "probabilities"
+  top_k: 5
+  confidence_threshold: 0.1
+  
+optimization:
+  reduce_op_set: true
+  fold_constants: true
+  remove_unused_ops: true
+  
+metadata:
+  model_name: "BirdClassifier"
+  model_version: "1.0.0"
+  author: "Bird Vision Team"
+  description: "Mobile bird species classifier"
+  license: "MIT"

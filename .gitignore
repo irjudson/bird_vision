@@ -1,0 +1,155 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyTorch
+*.pth
+*.pt
+*.ckpt
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Environment
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Data
+data/
+datasets/
+*.csv
+*.json
+*.pkl
+*.h5
+*.hdf5
+
+# Models
+models/
+checkpoints/
+*.mlmodel
+*.onnx
+*.tflite
+
+# Logs
+logs/
+*.log
+tensorboard/
+mlruns/
+wandb/
+
+# Artifacts
+artifacts/
+outputs/
+results/
+experiments/
+
+# Compression outputs
+compressed/
+mobile_deployment/
+
+# Temporary files
+tmp/
+temp/
+.tmp
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Documentation
+docs/_build/
+
+# Pre-commit
+.pre-commit-config.yaml
+
+# Test artifacts
+test_report.json
+benchmark_results.json
+coverage_analysis.json
+
+# Mobile deployment artifacts
+*.ipa
+*.apk
+*.aab
+
+# ESP32 specific
+esp32_firmware/
+sdkconfig
+sdkconfig.old
+
+# Audio files (for future multi-modal support)
+*.wav
+*.mp3
+*.flac
+*.aac
+*.ogg
+
+# Image files
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.tiff
+*.svg
+
+# Video files
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.webm
+
+# Compressed files
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# Temporary test files
+/tmp/bird_vision_test_*

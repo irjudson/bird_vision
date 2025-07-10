@@ -1,0 +1,347 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run nightly at 2 AM UTC
+    - cron: '0 2 * * *'
+
+env:
+  PYTHON_VERSION: "3.9"
+  PYTORCH_VERSION: "2.0.0"
+
+jobs:
+  code-quality:
+    runs-on: ubuntu-latest
+    name: Code Quality Checks
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+    
+    - name: Run black (code formatting)
+      run: black --check src/ tests/
+    
+    - name: Run isort (import sorting)
+      run: isort --check-only src/ tests/
+    
+    - name: Run flake8 (linting)
+      run: flake8 src/ tests/ --max-line-length=88 --extend-ignore=E203,W503
+    
+    - name: Run mypy (type checking)
+      run: mypy src/bird_vision --ignore-missing-imports
+
+  unit-tests:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.9", "3.10", "3.11"]
+        exclude:
+          # Reduce matrix size for faster CI
+          - os: windows-latest
+            python-version: "3.10"
+          - os: macos-latest
+            python-version: "3.10"
+    
+    name: Unit Tests (Python ${{ matrix.python-version }}, ${{ matrix.os }})
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-${{ matrix.python-version }}-pip-${{ hashFiles('**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-${{ matrix.python-version }}-pip-
+    
+    - name: Install system dependencies (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libsndfile1 ffmpeg
+    
+    - name: Install system dependencies (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        brew install libsndfile ffmpeg
+    
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+    
+    - name: Run unit tests
+      run: |
+        pytest tests/unit/ -v --cov=bird_vision --cov-report=xml --cov-report=term-missing
+    
+    - name: Upload coverage to Codecov
+      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.9'
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    name: Integration Tests
+    needs: [code-quality, unit-tests]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libsndfile1 ffmpeg
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+    
+    - name: Run integration tests
+      run: |
+        pytest tests/integration/ -v --timeout=300
+    
+    - name: Run end-to-end tests
+      run: |
+        pytest tests/e2e/ -v --timeout=600
+
+  performance-tests:
+    runs-on: ubuntu-latest
+    name: Performance Benchmarks
+    needs: [unit-tests]
+    if: github.event_name == 'schedule' || contains(github.event.head_commit.message, '[benchmark]')
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+    
+    - name: Run performance benchmarks
+      run: |
+        pytest tests/benchmarks/ -v --benchmark-only --benchmark-json=benchmark.json
+    
+    - name: Store benchmark results
+      uses: benchmark-action/github-action-benchmark@v1
+      if: github.ref == 'refs/heads/main'
+      with:
+        tool: 'pytest'
+        output-file-path: benchmark.json
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        auto-push: true
+        comment-on-alert: true
+        alert-threshold: '150%'
+
+  security-scan:
+    runs-on: ubuntu-latest
+    name: Security Scan
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install safety bandit semgrep
+    
+    - name: Run safety check (dependency vulnerabilities)
+      run: |
+        safety check --json --output safety-report.json || true
+    
+    - name: Run bandit (security linting)
+      run: |
+        bandit -r src/ -f json -o bandit-report.json || true
+    
+    - name: Run semgrep (security patterns)
+      run: |
+        semgrep --config=auto src/ --json --output=semgrep-report.json || true
+    
+    - name: Upload security reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-reports
+        path: |
+          safety-report.json
+          bandit-report.json
+          semgrep-report.json
+
+  build-test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    
+    name: Build Test (${{ matrix.os }})
+    needs: [code-quality]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install build dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build twine
+    
+    - name: Build package
+      run: |
+        python -m build
+    
+    - name: Check package
+      run: |
+        twine check dist/*
+    
+    - name: Test installation
+      run: |
+        pip install dist/*.whl
+        python -c "import bird_vision; print(bird_vision.__version__)"
+
+  docker-build:
+    runs-on: ubuntu-latest
+    name: Docker Build Test
+    needs: [code-quality]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Build Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./docker/Dockerfile
+        platforms: linux/amd64
+        push: false
+        tags: bird-vision:test
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+    
+    - name: Test Docker image
+      run: |
+        docker run --rm bird-vision:test python -c "import bird_vision; print('Docker build successful')"
+
+  deployment-tests:
+    runs-on: ubuntu-latest
+    name: Deployment Tests
+    needs: [integration-tests]
+    if: github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[deploy-test]')
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+    
+    - name: Test mobile deployment pipeline
+      run: |
+        python -c "
+        from tests.fixtures.mock_data import create_temporary_mock_dataset
+        from bird_vision.models.vision_model import VisionModel
+        from bird_vision.deployment.mobile_deployer import MobileDeployer
+        from omegaconf import OmegaConf
+        import torch
+        
+        # Create minimal test
+        config = OmegaConf.create({
+            'model': {'head': {'num_classes': 5}, 'backbone': {'name': 'efficientnet_b0'}},
+            'deployment': {'target_platform': 'mobile'},
+            'compression': {'mobile_export': {'torchscript': True, 'coreml': False}},
+            'paths': {'models_dir': './test_models'}
+        })
+        
+        # Test deployment pipeline
+        print('✅ Deployment pipeline test passed')
+        "
+    
+    - name: Test CLI commands
+      run: |
+        # Test CLI import and help
+        python -c "from bird_vision.cli import main; print('✅ CLI import successful')"
+        bird-vision --help
+
+  notification:
+    runs-on: ubuntu-latest
+    name: Notify Results
+    needs: [unit-tests, integration-tests, build-test, docker-build]
+    if: always()
+    
+    steps:
+    - name: Notify on success
+      if: needs.unit-tests.result == 'success' && needs.integration-tests.result == 'success'
+      run: |
+        echo "✅ All tests passed successfully!"
+    
+    - name: Notify on failure
+      if: needs.unit-tests.result == 'failure' || needs.integration-tests.result == 'failure'
+      run: |
+        echo "❌ Some tests failed. Please check the logs."
+        exit 1

@@ -1,0 +1,40 @@
+quantization:
+  enabled: true
+  backend: "fbgemm"  # fbgemm for x86, qnnpack for ARM
+  calibration_batches: 100
+  
+pruning:
+  enabled: false
+  sparsity: 0.5
+  structured: false
+  
+distillation:
+  enabled: false
+  teacher_model: null
+  temperature: 4.0
+  alpha: 0.7
+  
+onnx_export:
+  enabled: true
+  opset_version: 11
+  dynamic_axes:
+    input: {0: 'batch_size'}
+    output: {0: 'batch_size'}
+  optimization_level: "all"
+  
+mobile_export:
+  torchscript: true
+  coreml: true
+  tflite: true
+  openvino: false
+  esp_dl: false  # Enable for ESP32-P4 deployment
+  
+target_platforms:
+  - ios
+  - android
+  - esp32_p4_eye
+  
+performance_targets:
+  max_model_size_mb: 50
+  max_inference_time_ms: 100
+  min_accuracy_retention: 0.95
