@@ -1,0 +1,18 @@
+# Audio Processing Dependencies
+# For audio-based bird identification features
+
+-r requirements.txt
+
+# Audio Processing
+librosa>=0.10.1
+soundfile>=0.12.1
+audioread>=3.0.1
+
+# Optional: Additional audio formats support
+# ffmpeg-python>=0.2.0
+
+# Installation Notes:
+# 1. On some systems, you may need to install system audio libraries:
+#    Ubuntu/Debian: sudo apt install libsndfile1 ffmpeg
+#    macOS: brew install libsndfile ffmpeg
+#    Windows: Install from https://ffmpeg.org/download.html

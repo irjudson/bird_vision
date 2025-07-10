@@ -1,0 +1,21 @@
+# ESP32 Development Dependencies
+# For ESP32-P4-Eye deployment and firmware development
+
+-r requirements.txt
+
+# ESP32 Development Tools
+platformio>=6.1.0
+thop>=0.1.1
+
+# Model Analysis
+torchsummary>=1.5.1
+
+# Installation Notes:
+# 1. Install PlatformIO Core:
+#    pip install platformio
+#
+# 2. Install ESP-IDF (for ESP32-P4):
+#    Follow instructions at: https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/
+#
+# 3. For ESP32-P4-Eye development:
+#    pio platform install espressif32@^6.0.0

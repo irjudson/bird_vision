@@ -1,0 +1,28 @@
+# Raspberry Pi Specific Dependencies
+# For deployment on Raspberry Pi devices with camera support
+
+-r requirements.txt
+
+# Raspberry Pi Camera (only install on ARM devices)
+# Note: These require platform_machine to be 'armv7l' or 'aarch64'
+picamera2>=0.3.0; platform_machine=="armv7l" or platform_machine=="aarch64"
+libcamera>=0.3.0; platform_machine=="armv7l" or platform_machine=="aarch64"
+
+# Raspberry Pi GPIO (only install on ARM devices)
+rpi-gpio>=0.7.0; platform_machine=="armv7l" or platform_machine=="aarch64"
+pigpio>=1.78; platform_machine=="armv7l" or platform_machine=="aarch64"
+
+# Hardware monitoring
+GPUtil>=1.4.0
+
+# Installation Notes:
+# 1. On Raspberry Pi OS, install system dependencies first:
+#    sudo apt update
+#    sudo apt install -y python3-picamera2 libcamera-apps
+#    sudo apt install -y python3-dev python3-pip
+#
+# 2. For optimal performance on Raspberry Pi:
+#    pip install --extra-index-url https://www.piwheels.org/simple/ -r requirements-raspberry-pi.txt
+#
+# 3. Enable camera interface:
+#    sudo raspi-config -> Interface Options -> Camera -> Enable
