@@ -1,0 +1,162 @@
+# Raspberry Pi Deployment Configuration
+# Optimized for Raspberry Pi 4/5 with camera module
+
+# @package _global_
+defaults:
+  - base_config
+
+deployment:
+  platform: "raspberry_pi"
+  target_device: "rpi4"  # rpi4, rpi5, rpi_zero2w
+  
+  # Model optimization settings
+  model_optimization:
+    quantization:
+      enabled: true
+      method: "dynamic"  # dynamic, static, qat
+      dtype: "int8"
+      backend: "fbgemm"  # fbgemm for ARM/x86
+    
+    pruning:
+      enabled: true
+      sparsity: 0.3  # 30% sparsity for ARM efficiency
+      structured: true
+    
+    # ARM-specific optimizations
+    arm_optimization:
+      use_neon: true  # ARM NEON SIMD instructions
+      optimize_for_inference: true
+      use_onnx_runtime: true
+      
+  # Performance targets for different Pi models
+  performance_targets:
+    rpi4:
+      model_size_mb: 25  # Larger than ESP32, smaller than mobile
+      inference_time_ms: 300  # Reasonable for edge inference
+      memory_usage_mb: 512  # Pi 4 has 4-8GB RAM
+      power_consumption_w: 5.0  # Under 5W total
+      
+    rpi5:
+      model_size_mb: 35
+      inference_time_ms: 200  # Faster CPU
+      memory_usage_mb: 1024
+      power_consumption_w: 8.0
+      
+    rpi_zero2w:
+      model_size_mb: 15  # More constrained
+      inference_time_ms: 800  # Slower CPU
+      memory_usage_mb: 256
+      power_consumption_w: 2.0
+
+  # Camera configuration
+  camera:
+    interface: "libcamera"  # Modern Pi camera interface
+    resolution:
+      width: 640
+      height: 480
+    framerate: 15  # Balance quality vs. performance
+    format: "RGB888"
+    
+    # Camera-specific settings
+    auto_exposure: true
+    auto_white_balance: true
+    brightness: 50
+    contrast: 0
+    saturation: 0
+    
+    # Advanced camera features
+    buffer_count: 3  # Multiple buffers for smooth capture
+    preview_enabled: false  # Disable preview for headless operation
+    
+  # Image preprocessing pipeline
+  preprocessing:
+    resize_method: "bilinear"  # Fast resizing
+    normalization:
+      mean: [0.485, 0.456, 0.406]
+      std: [0.229, 0.224, 0.225]
+    
+    # Hardware acceleration when available
+    use_gpu: true  # Use VideoCore GPU if available
+    
+  # Runtime configuration
+  runtime:
+    backend: "onnxruntime"  # ONNX Runtime for ARM optimization
+    num_threads: 4  # Utilize all cores on Pi 4/5
+    inter_op_num_threads: 2
+    intra_op_num_threads: 2
+    
+    # Memory management
+    memory_pool_size_mb: 256
+    enable_memory_optimization: true
+    
+  # Output configuration
+  output:
+    format: "json"  # JSON output for integration
+    confidence_threshold: 0.7
+    top_k_predictions: 5
+    include_timing: true
+    include_system_stats: true
+    
+    # Logging configuration
+    log_level: "INFO"
+    log_predictions: true
+    log_performance: true
+    
+  # Integration options
+  integration:
+    # MQTT for IoT integration
+    mqtt:
+      enabled: false
+      broker: "localhost"
+      port: 1883
+      topic_prefix: "bird_vision"
+      
+    # REST API server
+    api_server:
+      enabled: true
+      host: "0.0.0.0"
+      port: 8080
+      
+    # File-based output
+    file_output:
+      enabled: true
+      directory: "/home/pi/bird_vision_output"
+      format: "json"
+      include_images: false  # Save space
+      
+  # System requirements
+  system_requirements:
+    os: "Raspberry Pi OS"  # 64-bit recommended
+    python_version: ">=3.9"
+    required_packages:
+      - "libcamera-apps"
+      - "python3-opencv"
+      - "python3-numpy"
+    
+    optional_packages:
+      - "python3-picamera2"  # New camera interface
+      - "python3-gpiozero"   # GPIO control
+      
+  # Installation paths
+  paths:
+    install_dir: "/opt/bird_vision"
+    model_dir: "/opt/bird_vision/models"
+    config_dir: "/opt/bird_vision/configs"
+    log_dir: "/var/log/bird_vision"
+    data_dir: "/home/pi/bird_vision_data"
+    
+  # Service configuration
+  service:
+    create_systemd_service: true
+    service_name: "bird-vision"
+    user: "pi"
+    group: "pi"
+    auto_start: true
+    restart_policy: "always"
+    
+  # Development and debugging
+  debug:
+    enable_profiling: false
+    save_intermediate_outputs: false
+    benchmark_mode: false
+    test_mode: false

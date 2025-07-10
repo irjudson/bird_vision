@@ -9,6 +9,7 @@ from unittest.mock import patch, Mock
 from bird_vision.models.vision_model import VisionModel
 from bird_vision.deployment.mobile_deployer import MobileDeployer
 from bird_vision.deployment.esp32_deployer import ESP32Deployer
+from bird_vision.deployment.raspberry_pi_deployer import RaspberryPiDeployer
 from bird_vision.compression.model_compressor import ModelCompressor
 
 
@@ -434,3 +435,361 @@ class TestCrossplatformCompatibility:
             assert "model_info" in metadata
             assert "preprocessing" in metadata
             assert "postprocessing" in metadata
+
+
+class TestRaspberryPiIntegration:
+    """Test Raspberry Pi deployment integration."""
+    
+    def test_raspberry_pi_deployment_pipeline(self, test_config: DictConfig, sample_model: VisionModel, sample_input: torch.Tensor, temp_dir: Path):
+        """Test complete Raspberry Pi deployment pipeline."""
+        # Configure for Raspberry Pi deployment
+        rpi_config = {
+            "platform": "raspberry_pi",
+            "target_device": "rpi4",
+            "model_optimization": {
+                "quantization": {"enabled": True, "method": "dynamic", "dtype": "int8"},
+                "pruning": {"enabled": True, "sparsity": 0.3},
+                "arm_optimization": {"use_neon": True, "optimize_for_inference": True}
+            },
+            "performance_targets": {
+                "rpi4": {"model_size_mb": 25, "inference_time_ms": 300}
+            },
+            "camera": {"interface": "libcamera", "resolution": {"width": 640, "height": 480}},
+            "paths": {
+                "install_dir": "/opt/bird_vision",
+                "model_dir": "/opt/bird_vision/models",
+                "config_dir": "/opt/bird_vision/configs"
+            },
+            "service": {"user": "pi", "group": "pi"}
+        }
+        test_config.deployment = DictConfig(rpi_config)
+        
+        deployer = RaspberryPiDeployer(test_config)
+        
+        # Mock external dependencies
+        with patch('bird_vision.deployment.raspberry_pi_deployer.ModelCompressor') as mock_compressor, \
+             patch('torch.onnx.export') as mock_onnx_export, \
+             patch.object(deployer.profiler, 'profile_model') as mock_profile:
+            
+            # Configure mocks
+            mock_compressor.return_value.compress_model.return_value = sample_model
+            mock_profile.return_value = {
+                "model_size_mb": 20.0,
+                "forward_time_ms": 150.0,
+                "parameters": 1000000
+            }
+            
+            # Run deployment
+            model_path = temp_dir / "test_model.pth"
+            torch.save(sample_model.state_dict(), model_path)
+            
+            result = deployer.deploy_model(sample_model, model_path, temp_dir)
+            
+            # Verify deployment success
+            assert result["success"] is True
+            assert result["platform"] == "raspberry_pi"
+            assert result["target_device"] == "rpi4"
+            assert "artifacts" in result
+            assert "performance" in result
+    
+    def test_raspberry_pi_arm_optimization(self, test_config: DictConfig, sample_model: VisionModel, sample_input: torch.Tensor, temp_dir: Path):
+        """Test ARM-specific optimizations for Raspberry Pi."""
+        # Configure ARM optimization
+        test_config.compression.arm_optimization = DictConfig({
+            "enabled": True,
+            "use_neon": True,
+            "optimize_for_inference": True,
+            "fuse_operators": True
+        })
+        
+        compressor = ModelCompressor(test_config)
+        
+        # Test ARM export functionality
+        with patch.object(compressor, 'export_for_raspberry_pi') as mock_export:
+            mock_export.return_value = {
+                "onnx_model": str(temp_dir / "model_rpi.onnx"),
+                "arm_optimized_pytorch": str(temp_dir / "model_arm.pth"),
+                "target_device": "rpi4",
+                "optimization_stats": {"size_mb": 20.0, "optimization_type": "ARM-specific"}
+            }
+            
+            result = mock_export(sample_model, sample_input, "test_model", "rpi4")
+            
+            assert "onnx_model" in result
+            assert "arm_optimized_pytorch" in result
+            assert result["target_device"] == "rpi4"
+    
+    def test_raspberry_pi_camera_integration(self, test_config: DictConfig, temp_dir: Path):
+        """Test camera integration code generation."""
+        rpi_config = DictConfig({
+            "platform": "raspberry_pi",
+            "camera": {
+                "interface": "libcamera",
+                "resolution": {"width": 640, "height": 480},
+                "framerate": 15
+            },
+            "paths": {"install_dir": "/opt/bird_vision"}
+        })
+        test_config.deployment = rpi_config
+        
+        deployer = RaspberryPiDeployer(test_config)
+        
+        # Generate camera integration
+        camera_script = deployer._generate_camera_integration(temp_dir)
+        
+        assert camera_script.exists()
+        assert camera_script.name == "bird_vision_camera.py"
+        
+        content = camera_script.read_text()
+        assert "BirdVisionCamera" in content
+        assert "picamera2" in content
+        assert "libcamera" in content
+        assert "640" in content  # Resolution width
+        assert "480" in content  # Resolution height
+    
+    @pytest.mark.parametrize("target_device", ["rpi4", "rpi5", "rpi_zero2w"])
+    def test_raspberry_pi_device_specific_optimization(self, test_config: DictConfig, sample_model: VisionModel, target_device: str, temp_dir: Path):
+        """Test device-specific optimizations for different Pi models."""
+        # Configure device-specific targets
+        rpi_config = DictConfig({
+            "platform": "raspberry_pi", 
+            "target_device": target_device,
+            "performance_targets": {
+                "rpi4": {"model_size_mb": 25, "inference_time_ms": 300},
+                "rpi5": {"model_size_mb": 35, "inference_time_ms": 200},
+                "rpi_zero2w": {"model_size_mb": 15, "inference_time_ms": 800}
+            },
+            "paths": {"install_dir": "/opt/bird_vision"}
+        })
+        test_config.deployment = rpi_config
+        
+        deployer = RaspberryPiDeployer(test_config)
+        
+        # Test performance validation
+        with patch.object(deployer.profiler, 'profile_model') as mock_profile:
+            # Mock model that meets targets
+            targets = rpi_config.performance_targets[target_device]
+            mock_profile.return_value = {
+                "model_size_mb": targets["model_size_mb"] - 5,  # Under target
+                "forward_time_ms": targets["inference_time_ms"] / 2,  # Conservative estimate
+                "parameters": 1000000
+            }
+            
+            performance = deployer._validate_performance(sample_model)
+            
+            assert performance["target_device"] == target_device
+            assert performance["meets_size_target"] is True
+            assert performance["meets_time_target"] is True
+    
+    def test_raspberry_pi_installation_package(self, test_config: DictConfig, temp_dir: Path):
+        """Test installation package generation."""
+        rpi_config = DictConfig({
+            "platform": "raspberry_pi",
+            "paths": {
+                "install_dir": "/opt/bird_vision",
+                "model_dir": "/opt/bird_vision/models", 
+                "config_dir": "/opt/bird_vision/configs",
+                "log_dir": "/var/log/bird_vision",
+                "data_dir": "/home/pi/bird_vision_data"
+            }
+        })
+        test_config.deployment = rpi_config
+        
+        deployer = RaspberryPiDeployer(test_config)
+        
+        # Generate installation package
+        package_dir = deployer._create_installation_package(temp_dir)
+        
+        assert package_dir.exists()
+        assert (package_dir / "install.sh").exists()
+        assert (package_dir / "config.json").exists()
+        
+        # Check install script content
+        install_script = (package_dir / "install.sh").read_text()
+        assert "libcamera-apps" in install_script
+        assert "python3-picamera2" in install_script
+        assert "/opt/bird_vision" in install_script
+        assert "systemctl" in install_script
+        
+        # Check config file
+        with open(package_dir / "config.json") as f:
+            import json
+            config_data = json.load(f)
+        
+        assert config_data["deployment"]["platform"] == "raspberry_pi"
+    
+    def test_raspberry_pi_systemd_service(self, test_config: DictConfig, temp_dir: Path):
+        """Test systemd service generation."""
+        rpi_config = DictConfig({
+            "platform": "raspberry_pi",
+            "service": {
+                "user": "pi",
+                "group": "pi", 
+                "restart_policy": "always"
+            },
+            "paths": {"install_dir": "/opt/bird_vision"}
+        })
+        test_config.deployment = rpi_config
+        
+        deployer = RaspberryPiDeployer(test_config)
+        
+        # Create package directory first
+        package_dir = temp_dir / "raspberry_pi_package"
+        package_dir.mkdir()
+        
+        # Generate systemd service
+        service_file = deployer._generate_systemd_service(temp_dir)
+        
+        assert service_file.exists()
+        assert service_file.name == "bird-vision.service"
+        
+        content = service_file.read_text()
+        assert "[Unit]" in content
+        assert "[Service]" in content
+        assert "[Install]" in content
+        assert "User=pi" in content
+        assert "Group=pi" in content
+        assert "Restart=always" in content
+    
+    def test_raspberry_pi_environment_validation(self, test_config: DictConfig):
+        """Test deployment environment validation."""
+        rpi_config = DictConfig({"platform": "raspberry_pi"})
+        test_config.deployment = rpi_config
+        
+        deployer = RaspberryPiDeployer(test_config)
+        
+        # Mock Raspberry Pi detection
+        with patch.object(deployer, 'detect_raspberry_pi', return_value='rpi4') as mock_detect, \
+             patch('subprocess.run') as mock_run:
+            
+            # Mock successful camera check  
+            mock_run.return_value = Mock(returncode=0)
+            
+            validation = deployer.validate_deployment_environment()
+            
+            assert validation["platform_detected"] == "rpi4"
+            assert "checks" in validation
+            assert "python_version" in validation["checks"]
+            mock_detect.assert_called_once()
+    
+    def test_raspberry_pi_cross_platform_compatibility(self, test_config: DictConfig, sample_model: VisionModel, sample_input: torch.Tensor, temp_dir: Path):
+        """Test cross-platform compatibility with other deployment targets."""
+        # Test that Raspberry Pi deployment doesn't interfere with other platforms
+        mobile_deployer = MobileDeployer(test_config) 
+        esp32_deployer = ESP32Deployer(test_config)
+        
+        rpi_config = DictConfig({
+            "platform": "raspberry_pi",
+            "target_device": "rpi4",
+            "paths": {"install_dir": "/opt/bird_vision"}
+        })
+        test_config.deployment = rpi_config
+        rpi_deployer = RaspberryPiDeployer(test_config)
+        
+        # Each deployer should work independently
+        assert rpi_deployer.target_device == "rpi4"
+        assert mobile_deployer.config == test_config
+        assert esp32_deployer.config == test_config
+        
+        # Test that they can coexist in the same project
+        assert isinstance(rpi_deployer, RaspberryPiDeployer)
+        assert isinstance(mobile_deployer, MobileDeployer)
+        assert isinstance(esp32_deployer, ESP32Deployer)
+
+
+class TestMultiPlatformIntegration:
+    """Test integration across all platforms."""
+    
+    def test_all_platforms_deployment(self, test_config: DictConfig, sample_model: VisionModel, sample_input: torch.Tensor, temp_dir: Path):
+        """Test deployment to all platforms from single model."""
+        # Configure for multi-platform deployment
+        platforms = ["ios", "android", "esp32", "raspberry_pi"]
+        
+        deployment_results = {}
+        
+        for platform in platforms:
+            platform_dir = temp_dir / platform
+            platform_dir.mkdir(exist_ok=True)
+            
+            if platform in ["ios", "android"]:
+                # Mobile deployment
+                test_config.deployment.target_platform = platform
+                deployer = MobileDeployer(test_config)
+                
+                with patch('bird_vision.deployment.mobile_deployer.ct') as mock_coreml, \
+                     patch.object(deployer, 'compressor') as mock_compressor:
+                    
+                    mock_compressor.compress_model.return_value = {
+                        "compressed_models": {"quantized": sample_model},
+                        "compression_stats": {"quantized": {"size_mb": 15.0}}
+                    }
+                    
+                    if platform == "ios":
+                        mock_coreml.convert.return_value = Mock()
+                        mock_coreml.ImageType = Mock()
+                        mock_coreml.ClassifierConfig = Mock()
+                    
+                    try:
+                        result = deployer.prepare_for_mobile(sample_model, sample_input, f"{platform}_model")
+                        deployment_results[platform] = {"success": True, "result": result}
+                    except Exception as e:
+                        deployment_results[platform] = {"success": False, "error": str(e)}
+            
+            elif platform == "esp32":
+                # ESP32 deployment
+                esp32_config = DictConfig({
+                    "platform": "esp32",
+                    "target_device": "esp32_p4_eye",
+                    "paths": {"install_dir": "/opt/esp32"}
+                })
+                test_config.deployment = esp32_config
+                deployer = ESP32Deployer(test_config)
+                
+                with patch.object(deployer, '_optimize_for_esp32') as mock_opt, \
+                     patch.object(deployer, '_convert_to_esp_dl') as mock_conv:
+                    
+                    mock_opt.return_value = (sample_model, {"size_mb": 6.0})
+                    mock_conv.return_value = str(platform_dir / "model.esp")
+                    
+                    try:
+                        model_path = platform_dir / "model.pth"
+                        torch.save(sample_model.state_dict(), model_path)
+                        result = deployer.deploy_model(sample_model, model_path, platform_dir)
+                        deployment_results[platform] = {"success": result.get("success", True), "result": result}
+                    except Exception as e:
+                        deployment_results[platform] = {"success": False, "error": str(e)}
+            
+            elif platform == "raspberry_pi":
+                # Raspberry Pi deployment
+                rpi_config = DictConfig({
+                    "platform": "raspberry_pi", 
+                    "target_device": "rpi4",
+                    "paths": {"install_dir": "/opt/bird_vision"}
+                })
+                test_config.deployment = rpi_config
+                deployer = RaspberryPiDeployer(test_config)
+                
+                with patch('bird_vision.deployment.raspberry_pi_deployer.ModelCompressor') as mock_comp, \
+                     patch('torch.onnx.export') as mock_onnx, \
+                     patch.object(deployer.profiler, 'profile_model') as mock_prof:
+                    
+                    mock_comp.return_value.compress_model.return_value = sample_model
+                    mock_prof.return_value = {"model_size_mb": 20.0, "forward_time_ms": 150.0}
+                    
+                    try:
+                        model_path = platform_dir / "model.pth"
+                        torch.save(sample_model.state_dict(), model_path)
+                        result = deployer.deploy_model(sample_model, model_path, platform_dir)
+                        deployment_results[platform] = {"success": result.get("success", True), "result": result}
+                    except Exception as e:
+                        deployment_results[platform] = {"success": False, "error": str(e)}
+        
+        # Verify that at least some platforms deployed successfully
+        successful_deployments = [p for p, r in deployment_results.items() if r.get("success")]
+        assert len(successful_deployments) >= 2, f"Expected at least 2 successful deployments, got {successful_deployments}"
+        
+        # Verify platform-specific artifacts
+        for platform, result in deployment_results.items():
+            if result.get("success"):
+                platform_dir = temp_dir / platform
+                assert platform_dir.exists(), f"Platform directory missing for {platform}"

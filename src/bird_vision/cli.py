@@ -16,6 +16,7 @@ from bird_vision.training.trainer import Trainer
 from bird_vision.validation.model_validator import ModelValidator
 from bird_vision.compression.model_compressor import ModelCompressor
 from bird_vision.deployment.mobile_deployer import MobileDeployer
+from bird_vision.deployment.raspberry_pi_deployer import RaspberryPiDeployer
 
 app = typer.Typer(help="Bird Vision: Multi-modal bird identification system")
 console = Console()
@@ -144,7 +145,7 @@ def compress(
 def deploy(
     model_path: str = typer.Argument(..., help="Path to model checkpoint"),
     config_path: str = typer.Option("configs/config.yaml", help="Path to config file"),
-    platform: str = typer.Option("mobile", help="Target platform (ios, android, mobile, esp32)"),
+    platform: str = typer.Option("mobile", help="Target platform (ios, android, mobile, esp32, raspberry_pi)"),
 ) -> None:
     """Deploy a model for mobile platforms."""
     console.print(f"[bold magenta]Preparing deployment for {platform}...[/bold magenta]")
@@ -158,6 +159,9 @@ def deploy(
         platform = "esp32_p4_eye"
         # Load ESP32-specific config
         cfg.deployment = hydra.compose(config_name="deployment/esp32")
+    elif platform == "raspberry_pi":
+        # Load Raspberry Pi-specific config
+        cfg.deployment = hydra.compose(config_name="deployment/raspberry_pi")
     
     cfg.deployment.target_platform = platform
     
@@ -179,6 +183,12 @@ def deploy(
         deployer = ESP32Deployer(cfg)
         results = deployer.prepare_for_esp32(model, sample_input, Path(model_path).stem)
         _display_esp32_deployment_results(results)
+    elif platform == "raspberry_pi":
+        deployer = RaspberryPiDeployer(cfg)
+        output_dir = Path("deployments") / "raspberry_pi"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        results = deployer.deploy_model(model, model_path, output_dir)
+        _display_raspberry_pi_deployment_results(results)
     else:
         deployer = MobileDeployer(cfg)
         results = deployer.prepare_for_mobile(model, sample_input, Path(model_path).stem)
@@ -191,7 +201,7 @@ def pipeline(
     experiment_name: Optional[str] = typer.Option(None, help="Experiment name"),
     skip_training: bool = typer.Option(False, help="Skip training step"),
     model_path: Optional[str] = typer.Option(None, help="Use existing model (if skip_training)"),
-    target_platform: str = typer.Option("mobile", help="Target deployment platform (mobile, esp32)"),
+    target_platform: str = typer.Option("mobile", help="Target deployment platform (mobile, esp32, raspberry_pi)"),
 ) -> None:
     """Run the complete pipeline: train -> validate -> compress -> deploy."""
     console.print("[bold cyan]Starting complete pipeline...[/bold cyan]")
@@ -257,6 +267,15 @@ def pipeline(
         deployer = ESP32Deployer(esp32_cfg)
         deployment_results = deployer.prepare_for_esp32(model, sample_input, "pipeline_model")
         _display_esp32_deployment_results(deployment_results)
+    elif target_platform == "raspberry_pi":
+        # Raspberry Pi deployment
+        rpi_cfg = cfg.copy()
+        rpi_cfg.deployment = hydra.compose(config_name="deployment/raspberry_pi")
+        deployer = RaspberryPiDeployer(rpi_cfg)
+        output_dir = Path("deployments") / "raspberry_pi"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        deployment_results = deployer.deploy_model(model, model_path, output_dir)
+        _display_raspberry_pi_deployment_results(deployment_results)
     else:
         # Mobile deployment
         deployer = MobileDeployer(cfg)
@@ -360,6 +379,67 @@ def _display_esp32_deployment_results(results: dict) -> None:
         table.add_row("Parameters", f"{params:,}", "-", "ℹ️")
         
         console.print(table)
+
+
+def _display_raspberry_pi_deployment_results(results: dict) -> None:
+    """Display Raspberry Pi deployment results."""
+    console.print(f"\n[bold green]Raspberry Pi Deployment {'Success' if results.get('success') else 'Failed'}![/bold green]")
+    
+    if not results.get("success"):
+        console.print("[bold red]Deployment failed with errors:[/bold red]")
+        for error in results.get("errors", []):
+            console.print(f"  - {error}")
+        return
+    
+    # Deployment summary
+    table = Table(title="Raspberry Pi Deployment Summary")
+    table.add_column("Aspect", style="cyan")
+    table.add_column("Details", style="magenta")
+    
+    table.add_row("Target Device", results.get("target_device", "rpi4"))
+    table.add_row("Platform", results.get("platform", "raspberry_pi"))
+    
+    # Performance metrics
+    performance = results.get("performance", {})
+    if performance:
+        size_mb = performance.get("model_size_mb", "N/A")
+        if isinstance(size_mb, (int, float)):
+            table.add_row("Model Size", f"{size_mb:.1f} MB")
+        
+        inference_time = performance.get("estimated_inference_time_ms", "N/A")
+        if isinstance(inference_time, (int, float)):
+            table.add_row("Est. Inference Time", f"{inference_time:.1f} ms")
+        
+        size_target = performance.get("meets_size_target", False)
+        time_target = performance.get("meets_time_target", False)
+        table.add_row("Meets Size Target", "✅ Yes" if size_target else "⚠️ No")
+        table.add_row("Meets Time Target", "✅ Yes" if time_target else "⚠️ No")
+    
+    console.print(table)
+    
+    # Artifacts generated
+    artifacts = results.get("artifacts", {})
+    if artifacts:
+        artifacts_table = Table(title="Generated Artifacts")
+        artifacts_table.add_column("Artifact", style="cyan")
+        artifacts_table.add_column("Location", style="yellow")
+        
+        for artifact_name, artifact_path in artifacts.items():
+            display_name = artifact_name.replace("_", " ").title()
+            artifacts_table.add_row(display_name, str(artifact_path))
+        
+        console.print(artifacts_table)
+    
+    # Installation instructions
+    console.print("\n[bold cyan]Next Steps:[/bold cyan]")
+    console.print("1. Transfer the deployment package to your Raspberry Pi:")
+    console.print("   [dim]scp -r deployments/raspberry_pi/raspberry_pi_package pi@your-pi-ip:~/[/dim]")
+    console.print("2. On your Raspberry Pi, run the installation:")
+    console.print("   [dim]cd ~/raspberry_pi_package && chmod +x install.sh && ./install.sh[/dim]")
+    console.print("3. Start the service:")
+    console.print("   [dim]sudo systemctl start bird-vision[/dim]")
+    console.print("4. Check logs:")
+    console.print("   [dim]sudo journalctl -u bird-vision -f[/dim]")
 
 
 def main() -> None:
