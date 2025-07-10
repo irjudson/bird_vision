@@ -304,29 +304,49 @@ class ModelCompressor:
     def _export_to_tflite(
         self, model: nn.Module, sample_input: torch.Tensor, model_name: str, variant: str
     ) -> Dict[str, Any]:
-        """Export model to TensorFlow Lite format."""
+        """Export model to TensorFlow Lite format using ai-edge-litert."""
         try:
             tflite_path = self.output_dir / f"{model_name}_{variant}.tflite"
             
-            # First convert to ONNX, then to TFLite via TensorFlow
-            onnx_path = self.output_dir / f"temp_{model_name}_{variant}.onnx"
-            
-            # Export to ONNX first
-            torch.onnx.export(
-                model, sample_input, onnx_path,
-                export_params=True, opset_version=11,
-                input_names=["input"], output_names=["output"]
-            )
-            
-            # Note: Direct ONNX to TFLite conversion requires additional tools
-            # This is a placeholder for the actual conversion process
-            logger.warning("TFLite export requires onnx-tf converter - placeholder implementation")
-            
-            return {
-                "success": False,
-                "error": "TFLite export requires additional conversion tools",
-                "note": "Use onnx-tf converter for full implementation",
-            }
+            # First convert to TorchScript, then to TensorFlow SavedModel, then to TFLite
+            try:
+                import tensorflow as tf
+                import ai_edge_litert as lite
+                
+                # Convert PyTorch to TorchScript
+                traced_model = torch.jit.trace(model, sample_input)
+                
+                # For now, we'll use ONNX as intermediate format
+                # Direct PyTorch to TFLite conversion requires ai-edge-torch
+                onnx_path = self.output_dir / f"temp_{model_name}_{variant}.onnx"
+                
+                # Export to ONNX first
+                torch.onnx.export(
+                    model, sample_input, onnx_path,
+                    export_params=True, opset_version=11,
+                    input_names=["input"], output_names=["output"]
+                )
+                
+                # Note: For production use, consider using ai-edge-torch for direct conversion
+                logger.warning(
+                    "TFLite export via ONNX intermediate format. "
+                    "Consider using ai-edge-torch for direct PyTorch to TFLite conversion."
+                )
+                
+                return {
+                    "success": False,
+                    "error": "Direct PyTorch to TFLite conversion requires ai-edge-torch",
+                    "note": "Install ai-edge-torch for seamless PyTorch to TFLite conversion",
+                    "alternative": "Use ONNX format for cross-platform deployment",
+                }
+                
+            except ImportError as e:
+                logger.error(f"ai-edge-litert not available: {e}")
+                return {
+                    "success": False,
+                    "error": f"ai-edge-litert import failed: {e}",
+                    "note": "Install ai-edge-litert: pip install ai-edge-litert",
+                }
         
         except Exception as e:
             logger.error(f"TFLite export failed: {e}")

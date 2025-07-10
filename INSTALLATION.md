@@ -56,6 +56,15 @@ pip install -r requirements-esp32.txt
 pip install -r requirements-audio.txt
 ```
 
+#### TensorFlow Lite / LiteRT
+```bash
+# Modern LiteRT (recommended for mobile deployment)
+pip install -r requirements-tflite.txt
+
+# Alternative: Full TensorFlow (includes tf.lite)
+pip install tensorflow
+```
+
 ## Using pyproject.toml (Recommended)
 
 For a complete installation with all optional dependencies:
@@ -76,8 +85,11 @@ pip install -e ".[esp32]"
 # Audio processing
 pip install -e ".[audio]"
 
+# TensorFlow Lite / LiteRT
+pip install -e ".[tflite]"
+
 # All features
-pip install -e ".[dev,raspberry_pi,esp32,audio]"
+pip install -e ".[dev,raspberry_pi,esp32,audio,tflite]"
 ```
 
 ## Key Dependencies
@@ -96,6 +108,7 @@ pip install -e ".[dev,raspberry_pi,esp32,audio]"
 - **ONNXRuntime 1.19+**: High-performance inference
 - **CoreML Tools 8.0+**: iOS deployment
 - **OpenVINO 2024.4+**: Intel optimization
+- **LiteRT (ai-edge-litert) 1.0+**: Mobile/edge deployment (formerly TensorFlow Lite)
 
 ### Configuration & Tracking
 - **Hydra 1.3.2+**: Configuration management
@@ -127,6 +140,7 @@ bird-vision --help
 1. **NumPy Compatibility**: We pin NumPy to `>=1.26.0,<2.1.0` for compatibility
 2. **PyTorch Version**: Ensure you have PyTorch 2.4+ for Python 3.13 support
 3. **ARM Devices**: Use piwheels on Raspberry Pi for pre-compiled wheels
+4. **TensorFlow Lite**: Use `ai-edge-litert` instead of deprecated `tensorflow-lite` package
 
 ### Platform-Specific Notes
 

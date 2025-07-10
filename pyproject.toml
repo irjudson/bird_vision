@@ -39,6 +39,7 @@ dependencies = [
     "openvino>=2024.4.0",
     "coremltools>=8.0.0",
     "tensorflow>=2.17.0",
+    "ai-edge-litert>=1.0.0",
 ]
 
 [project.optional-dependencies]
@@ -78,6 +79,11 @@ raspberry_pi = [
     # Raspberry Pi OS utilities
     "psutil>=6.0.0",
     "GPUtil>=1.4.0",
+]
+tflite = [
+    # TensorFlow Lite / LiteRT for mobile deployment
+    "ai-edge-litert>=1.0.0",
+    "ai-edge-torch>=0.1.0",  # For direct PyTorch to TFLite conversion
 ]
 
 [project.scripts]
