@@ -17,7 +17,7 @@ pre-commit>=4.0.0
 
 # Development Environment - Latest versions
 jupyter>=1.1.0
-ipykernel>=6.30.0
+ipykernel>=7.0.0
 
 # Optional: GPU utilities (install only if needed)
 # GPUtil>=1.4.0

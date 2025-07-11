@@ -12,22 +12,34 @@ Bird Vision is optimized for **Python 3.10+** and has been tested with **Python 
 git clone <repository-url>
 cd bird_vision
 
-# Create virtual environment (recommended)
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+# Create virtual environment (REQUIRED for system Python)
+python3 -m venv bird_vision_env
+source bird_vision_env/bin/activate  # On Windows: bird_vision_env\Scripts\activate
+
+# Upgrade pip to latest version
+pip install --upgrade pip
 
 # Install core dependencies
 pip install -r requirements.txt
 
-# Or install in development mode
+# Or install in development mode (includes Jupyter/ipykernel)
 pip install -e ".[dev]"
 ```
 
 ### Platform-Specific Installations
 
-#### Development Environment
+#### Development Environment (Jupyter + ipykernel)
 ```bash
+# Install development dependencies (includes Jupyter and ipykernel 7.0+)
 pip install -r requirements-dev.txt
+
+# Register the kernel with Jupyter (required for notebook development)
+python -m ipykernel install --user --name=bird_vision --display-name="Bird Vision"
+
+# Start Jupyter
+jupyter lab
+# or
+jupyter notebook
 ```
 
 #### Raspberry Pi Deployment
@@ -128,6 +140,8 @@ pip install -e ".[dev,raspberry_pi,esp32,audio,tflite]"
 - **Ruff 0.10.0+**: Ultra-fast Python linter and formatter
 - **Black 24.12.0+**: Latest code formatter
 - **MyPy 1.14.0+**: Advanced type checking
+- **Jupyter Lab**: Interactive development environment
+- **ipykernel 7.0.0+**: Jupyter kernel with Python 3.13 support
 
 ## Verification
 
@@ -151,12 +165,26 @@ bird-vision --help
 
 ### Common Issues
 
-1. **NumPy 2.x**: Latest NumPy 2.2.1+ with major performance improvements and Python 3.13 support
-2. **PyTorch Version**: Ensure you have PyTorch 2.7.1+ for full Python 3.13 support
-3. **TensorFlow**: Limited Python 3.13 support - use Python 3.12 if TensorFlow is critical
-4. **ARM Devices**: Use piwheels on Raspberry Pi for pre-compiled wheels
-5. **Mobile Deployment**: Use ONNX Runtime 1.21.0+ for Python 3.13 compatible mobile deployment
-6. **LiteRT**: ai-edge-litert only supports Python ≤3.12 currently
+1. **Virtual Environment Required**: If you see "externally-managed-environment" error, create a virtual environment:
+   ```bash
+   python3 -m venv bird_vision_env
+   source bird_vision_env/bin/activate  # On Windows: bird_vision_env\Scripts\activate
+   pip install -r requirements.txt
+   ```
+
+2. **ipykernel Python 3.13**: Use ipykernel>=7.0.0 for Python 3.13 support
+
+3. **NumPy 2.x**: Latest NumPy 2.2.1+ with major performance improvements and Python 3.13 support
+
+4. **PyTorch Version**: Ensure you have PyTorch 2.7.1+ for full Python 3.13 support
+
+5. **TensorFlow**: Limited Python 3.13 support - use Python 3.12 if TensorFlow is critical
+
+6. **ARM Devices**: Use piwheels on Raspberry Pi for pre-compiled wheels
+
+7. **Mobile Deployment**: Use ONNX Runtime 1.21.0+ for Python 3.13 compatible mobile deployment
+
+8. **LiteRT**: ai-edge-litert only supports Python ≤3.12 currently
 
 ### Platform-Specific Notes
 
