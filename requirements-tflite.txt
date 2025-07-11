@@ -1,14 +1,19 @@
-# TensorFlow Lite / LiteRT Dependencies - Latest Versions
-# For mobile and edge deployment using TensorFlow Lite models
-# Updated January 2025 with latest stable versions
+# Mobile Deployment Dependencies - Python 3.13 Compatible
+# Alternative to TensorFlow Lite / LiteRT for mobile and edge deployment
+# Updated January 2025 with Python 3.13 compatible solutions
 
 -r requirements.txt
 
-# LiteRT (formerly TensorFlow Lite) - Latest stable
-ai-edge-litert>=1.1.0
+# ONNX Runtime for mobile deployment (Python 3.13 compatible)
+onnxruntime>=1.21.0
 
-# Direct PyTorch to TFLite conversion - Latest version
-ai-edge-torch>=0.2.0
+# Note: LiteRT (ai-edge-litert) and ai-edge-torch don't support Python 3.13 yet
+# Uncomment these when Python 3.13 support becomes available:
+# ai-edge-litert>=1.1.0
+# ai-edge-torch>=0.2.0
+
+# Alternative: Use full TensorFlow with tf.lite (Python ≤3.12 only)
+# tensorflow>=2.18.0; python_version<"3.13"
 
 # Installation Notes:
 # 1. TensorFlow Lite has been rebranded to LiteRT (Lite Runtime)

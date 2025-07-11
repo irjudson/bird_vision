@@ -56,12 +56,13 @@ pip install -r requirements-esp32.txt
 pip install -r requirements-audio.txt
 ```
 
-#### TensorFlow Lite / LiteRT
+#### Mobile Deployment (ONNX Runtime - Python 3.13 Compatible)
 ```bash
-# Modern LiteRT (recommended for mobile deployment)
+# ONNX Runtime for mobile deployment (Python 3.13 compatible)
 pip install -r requirements-tflite.txt
 
-# Alternative: Full TensorFlow (includes tf.lite)
+# Note: LiteRT (ai-edge-litert) doesn't support Python 3.13 yet
+# Alternative for Python ≤3.12: Full TensorFlow (includes tf.lite)
 pip install tensorflow
 ```
 
@@ -85,7 +86,7 @@ pip install -e ".[esp32]"
 # Audio processing
 pip install -e ".[audio]"
 
-# TensorFlow Lite / LiteRT
+# Mobile Deployment (ONNX Runtime)
 pip install -e ".[tflite]"
 
 # All features
@@ -114,7 +115,8 @@ pip install -e ".[dev,raspberry_pi,esp32,audio,tflite]"
 - **ONNXRuntime 1.21.0+**: High-performance inference engine
 - **CoreML Tools 8.2.0+**: Latest iOS deployment tools
 - **OpenVINO 2024.6.0+**: Intel optimization suite
-- **LiteRT (ai-edge-litert) 1.1.0+**: Google's latest mobile/edge deployment
+- **ONNX Runtime 1.21.0+**: Cross-platform mobile/edge deployment (Python 3.13 compatible)
+- **LiteRT (ai-edge-litert)**: Google's mobile deployment (Python ≤3.12 only)
 
 ### Configuration & Tracking
 - **Hydra 1.3.2+**: Configuration management
@@ -153,7 +155,8 @@ bird-vision --help
 2. **PyTorch Version**: Ensure you have PyTorch 2.7.1+ for full Python 3.13 support
 3. **TensorFlow**: Limited Python 3.13 support - use Python 3.12 if TensorFlow is critical
 4. **ARM Devices**: Use piwheels on Raspberry Pi for pre-compiled wheels
-5. **LiteRT**: Use `ai-edge-litert 1.1.0+` for latest mobile deployment features
+5. **Mobile Deployment**: Use ONNX Runtime 1.21.0+ for Python 3.13 compatible mobile deployment
+6. **LiteRT**: ai-edge-litert only supports Python ≤3.12 currently
 
 ### Platform-Specific Notes
 
@@ -199,11 +202,12 @@ mypy .
 | 3.10   | 2.7.1+  | 2.18.0+    | 2.2.1+ | ✅ Fully Supported |
 | 3.11   | 2.7.1+  | 2.18.0+    | 2.2.1+ | ✅ Fully Supported |
 | 3.12   | 2.7.1+  | 2.18.0+    | 2.2.1+ | ✅ Fully Supported |
-| 3.13   | 2.7.1+  | ❌ No Support | 2.2.1+ | ✅ **Recommended** |
+| 3.13   | 2.7.1+  | ❌ No Support | 2.2.1+ | ✅ **Recommended** (ONNX Runtime for mobile) |
 | 3.9    | 2.7.1+  | 2.18.0+    | 2.2.1+ | ⚠️ Legacy (EOL soon) |
 
 **Key Updates:**
-- **Python 3.13**: Full support except TensorFlow
+- **Python 3.13**: Full support except TensorFlow and LiteRT
+- **Mobile Deployment**: Use ONNX Runtime for Python 3.13 compatibility
 - **NumPy 2.x**: Major performance improvements, breaking changes from 1.x
 - **PyTorch 2.7.1**: Latest with comprehensive Python 3.13 support
-- **TensorFlow**: Use Python ≤3.12 for TensorFlow compatibility
+- **TensorFlow & LiteRT**: Use Python ≤3.12 for compatibility

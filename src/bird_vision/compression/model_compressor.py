@@ -301,61 +301,101 @@ class ModelCompressor:
             logger.error(f"CoreML export failed: {e}")
             return {"success": False, "error": str(e)}
     
+    def _export_to_mobile_onnx(
+        self, model: nn.Module, sample_input: torch.Tensor, model_name: str, variant: str
+    ) -> Dict[str, Any]:
+        """Export model to ONNX format optimized for mobile deployment."""
+        try:
+            onnx_mobile_path = self.output_dir / f"{model_name}_{variant}_mobile.onnx"
+            
+            # Export to ONNX with mobile-optimized settings
+            torch.onnx.export(
+                model,
+                sample_input,
+                onnx_mobile_path,
+                export_params=True,
+                opset_version=11,  # Good mobile compatibility
+                do_constant_folding=True,
+                input_names=["input"],
+                output_names=["output"],
+                dynamic_axes={
+                    "input": {0: "batch_size"},
+                    "output": {0: "batch_size"}
+                }
+            )
+            
+            # Verify ONNX model
+            try:
+                import onnx
+                onnx_model = onnx.load(onnx_mobile_path)
+                onnx.checker.check_model(onnx_model)
+                logger.info(f"ONNX mobile model exported and verified: {onnx_mobile_path}")
+            except ImportError:
+                logger.warning("ONNX package not available for model verification")
+            
+            file_size = onnx_mobile_path.stat().st_size / (1024 * 1024)  # MB
+            
+            return {
+                "success": True,
+                "path": str(onnx_mobile_path),
+                "size_mb": file_size,
+                "format": "onnx_mobile",
+                "note": "ONNX format optimized for mobile deployment with ONNX Runtime",
+                "deployment_info": {
+                    "runtime": "onnxruntime",
+                    "platforms": ["iOS", "Android", "Edge", "Raspberry Pi"],
+                    "python_313_compatible": True
+                }
+            }
+        
+        except Exception as e:
+            logger.error(f"Mobile ONNX export failed: {e}")
+            return {"success": False, "error": str(e)}
+    
     def _export_to_tflite(
         self, model: nn.Module, sample_input: torch.Tensor, model_name: str, variant: str
     ) -> Dict[str, Any]:
-        """Export model to TensorFlow Lite format using ai-edge-litert."""
+        """Export model to TensorFlow Lite format (when Python 3.13 compatible)."""
+        
+        # Check Python version for TFLite compatibility
+        import sys
+        if sys.version_info >= (3, 13):
+            logger.warning(
+                "TensorFlow Lite (ai-edge-litert) doesn't support Python 3.13 yet. "
+                "Using ONNX Runtime for mobile deployment instead."
+            )
+            return self._export_to_mobile_onnx(model, sample_input, model_name, variant)
+        
         try:
-            tflite_path = self.output_dir / f"{model_name}_{variant}.tflite"
-            
-            # First convert to TorchScript, then to TensorFlow SavedModel, then to TFLite
+            # Fallback to TensorFlow Lite for Python ≤3.12
             try:
                 import tensorflow as tf
-                import ai_edge_litert as lite
+                logger.info("Using TensorFlow Lite export for mobile deployment")
                 
-                # Convert PyTorch to TorchScript
-                traced_model = torch.jit.trace(model, sample_input)
-                
-                # For now, we'll use ONNX as intermediate format
-                # Direct PyTorch to TFLite conversion requires ai-edge-torch
+                # Convert to ONNX first, then note conversion path
                 onnx_path = self.output_dir / f"temp_{model_name}_{variant}.onnx"
-                
-                # Export to ONNX first
                 torch.onnx.export(
                     model, sample_input, onnx_path,
                     export_params=True, opset_version=11,
                     input_names=["input"], output_names=["output"]
                 )
                 
-                # Note: For production use, consider using ai-edge-torch for direct conversion
-                logger.warning(
-                    "TFLite export via ONNX intermediate format. "
-                    "Consider using ai-edge-torch for direct PyTorch to TFLite conversion."
-                )
-                
                 return {
                     "success": False,
-                    "error": "Direct PyTorch to TFLite conversion requires ai-edge-torch",
-                    "note": "Install ai-edge-torch for seamless PyTorch to TFLite conversion",
-                    "alternative": "Use ONNX format for cross-platform deployment",
+                    "error": "Direct PyTorch to TFLite conversion requires additional tools",
+                    "note": "Use ONNX Runtime for Python 3.13 compatible mobile deployment",
+                    "alternative_used": "ONNX format for cross-platform deployment",
+                    "fallback": self._export_to_mobile_onnx(model, sample_input, model_name, variant)
                 }
                 
             except ImportError as e:
-                logger.error(f"ai-edge-litert not available: {e}")
-                return {
-                    "success": False,
-                    "error": f"ai-edge-litert import failed: {e}",
-                    "note": "Install ai-edge-litert: pip install ai-edge-litert",
-                }
+                logger.error(f"TensorFlow not available: {e}")
+                logger.info("Falling back to ONNX Runtime for mobile deployment")
+                return self._export_to_mobile_onnx(model, sample_input, model_name, variant)
         
         except Exception as e:
             logger.error(f"TFLite export failed: {e}")
             return {"success": False, "error": str(e)}
-        
-        finally:
-            # Cleanup temporary ONNX file
-            if 'onnx_path' in locals() and Path(onnx_path).exists():
-                os.remove(onnx_path)
     
     def _export_to_esp_dl(
         self, model: nn.Module, sample_input: torch.Tensor, model_name: str, variant: str

@@ -57,8 +57,8 @@ dependencies = [
     # TensorFlow - Note: No Python 3.13 support yet, stick with 3.12 compatibility
     "tensorflow>=2.18.0; python_version<'3.13'",
     
-    # LiteRT for mobile deployment
-    "ai-edge-litert>=1.1.0",
+    # Mobile deployment - ONNX Runtime (Python 3.13 compatible alternative to LiteRT)
+    # Note: ai-edge-litert doesn't support Python 3.13 yet
     
     # System Monitoring
     "psutil>=6.1.0",
@@ -111,9 +111,13 @@ raspberry_pi = [
     "GPUtil>=1.4.0",
 ]
 tflite = [
-    # TensorFlow Lite / LiteRT for mobile deployment - Latest versions
-    "ai-edge-litert>=1.1.0",
-    "ai-edge-torch>=0.2.0",  # For direct PyTorch to TFLite conversion
+    # TensorFlow Lite / LiteRT alternative for mobile deployment
+    # Note: ai-edge-litert and ai-edge-torch don't support Python 3.13 yet
+    # Use ONNX Runtime as alternative for mobile deployment
+    "onnxruntime>=1.21.0",  # Python 3.13 compatible mobile deployment
+    # Uncomment when Python 3.13 support is available:
+    # "ai-edge-litert>=1.1.0",
+    # "ai-edge-torch>=0.2.0",
 ]
 
 [project.scripts]

@@ -50,8 +50,8 @@ coremltools>=8.2.0
 # TensorFlow - Note: Limited Python 3.13 support, use 3.12 if needed
 tensorflow>=2.18.0; python_version<"3.13"
 
-# LiteRT for mobile deployment - Latest Google AI Edge
-ai-edge-litert>=1.1.0
+# Mobile deployment - ONNX Runtime (Python 3.13 compatible alternative to LiteRT)
+# Note: ai-edge-litert doesn't support Python 3.13 yet, use ONNX Runtime instead
 
 # System Monitoring - Latest version
 psutil>=6.1.0
