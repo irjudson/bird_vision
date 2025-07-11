@@ -1,12 +1,13 @@
-# Audio Processing Dependencies
+# Audio Processing Dependencies - Latest Versions
 # For audio-based bird identification features
+# Updated January 2025 with latest stable versions
 
 -r requirements.txt
 
-# Audio Processing
-librosa>=0.10.1
-soundfile>=0.12.1
-audioread>=3.0.1
+# Audio Processing - Latest stable versions
+librosa>=0.10.5
+soundfile>=0.12.2
+audioread>=3.0.2
 
 # Optional: Additional audio formats support
 # ffmpeg-python>=0.2.0

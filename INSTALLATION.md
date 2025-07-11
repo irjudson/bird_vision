@@ -92,28 +92,40 @@ pip install -e ".[tflite]"
 pip install -e ".[dev,raspberry_pi,esp32,audio,tflite]"
 ```
 
-## Key Dependencies
+## Key Dependencies (Latest Versions - January 2025)
 
 ### Core Framework
-- **PyTorch 2.4+**: Deep learning framework with Python 3.13 support
-- **Torchvision 0.19+**: Computer vision models and utilities
-- **TimM 1.0+**: Pre-trained vision models
+- **PyTorch 2.7.1+**: Latest deep learning framework with full Python 3.13 support
+- **Torchvision 0.20.1+**: Computer vision models and utilities
+- **TimM 1.0.12+**: Latest pre-trained vision models
+
+### Data Science Stack
+- **NumPy 2.2.1+**: Latest with Python 3.13 support and performance improvements
+- **Pandas 2.3.0+**: Modern data manipulation with Python 3.13 compatibility
+- **Scikit-learn 1.7.0+**: Latest ML algorithms with optimizations
 
 ### Computer Vision
-- **OpenCV 4.10+**: Image processing and computer vision
-- **Albumentations 1.4+**: Advanced data augmentation
+- **OpenCV 4.12.0+**: Latest image processing and computer vision
+- **Albumentations 1.4.23+**: Advanced data augmentation
+- **Pillow 11.1.0+**: Modern image processing library
 
 ### Model Deployment
-- **ONNX 1.16+**: Cross-platform model format
-- **ONNXRuntime 1.19+**: High-performance inference
-- **CoreML Tools 8.0+**: iOS deployment
-- **OpenVINO 2024.4+**: Intel optimization
-- **LiteRT (ai-edge-litert) 1.0+**: Mobile/edge deployment (formerly TensorFlow Lite)
+- **ONNX 1.18.0+**: Latest cross-platform model format
+- **ONNXRuntime 1.21.0+**: High-performance inference engine
+- **CoreML Tools 8.2.0+**: Latest iOS deployment tools
+- **OpenVINO 2024.6.0+**: Intel optimization suite
+- **LiteRT (ai-edge-litert) 1.1.0+**: Google's latest mobile/edge deployment
 
 ### Configuration & Tracking
 - **Hydra 1.3.2+**: Configuration management
-- **MLflow 2.16+**: Experiment tracking
-- **Weights & Biases 0.18+**: Advanced experiment tracking
+- **MLflow 2.21.0+**: Latest experiment tracking
+- **Weights & Biases 0.21.0+**: Advanced experiment tracking
+- **Pydantic 2.10.2+**: Modern data validation
+
+### Development Tools
+- **Ruff 0.10.0+**: Ultra-fast Python linter and formatter
+- **Black 24.12.0+**: Latest code formatter
+- **MyPy 1.14.0+**: Advanced type checking
 
 ## Verification
 
@@ -137,10 +149,11 @@ bird-vision --help
 
 ### Common Issues
 
-1. **NumPy Compatibility**: We pin NumPy to `>=1.26.0,<2.1.0` for compatibility
-2. **PyTorch Version**: Ensure you have PyTorch 2.4+ for Python 3.13 support
-3. **ARM Devices**: Use piwheels on Raspberry Pi for pre-compiled wheels
-4. **TensorFlow Lite**: Use `ai-edge-litert` instead of deprecated `tensorflow-lite` package
+1. **NumPy 2.x**: Latest NumPy 2.2.1+ with major performance improvements and Python 3.13 support
+2. **PyTorch Version**: Ensure you have PyTorch 2.7.1+ for full Python 3.13 support
+3. **TensorFlow**: Limited Python 3.13 support - use Python 3.12 if TensorFlow is critical
+4. **ARM Devices**: Use piwheels on Raspberry Pi for pre-compiled wheels
+5. **LiteRT**: Use `ai-edge-litert 1.1.0+` for latest mobile deployment features
 
 ### Platform-Specific Notes
 
@@ -179,12 +192,18 @@ black --check .
 mypy .
 ```
 
-## Version Compatibility Matrix
+## Version Compatibility Matrix (January 2025)
 
-| Python | PyTorch | Status |
-|--------|---------|--------|
-| 3.10   | 2.4+    | ✅ Supported |
-| 3.11   | 2.4+    | ✅ Supported |
-| 3.12   | 2.4+    | ✅ Supported |
-| 3.13   | 2.4+    | ✅ Fully Tested |
-| 3.9    | 2.4+    | ⚠️ Legacy (not recommended) |
+| Python | PyTorch | TensorFlow | NumPy | Status |
+|--------|---------|------------|-------|--------|
+| 3.10   | 2.7.1+  | 2.18.0+    | 2.2.1+ | ✅ Fully Supported |
+| 3.11   | 2.7.1+  | 2.18.0+    | 2.2.1+ | ✅ Fully Supported |
+| 3.12   | 2.7.1+  | 2.18.0+    | 2.2.1+ | ✅ Fully Supported |
+| 3.13   | 2.7.1+  | ❌ No Support | 2.2.1+ | ✅ **Recommended** |
+| 3.9    | 2.7.1+  | 2.18.0+    | 2.2.1+ | ⚠️ Legacy (EOL soon) |
+
+**Key Updates:**
+- **Python 3.13**: Full support except TensorFlow
+- **NumPy 2.x**: Major performance improvements, breaking changes from 1.x
+- **PyTorch 2.7.1**: Latest with comprehensive Python 3.13 support
+- **TensorFlow**: Use Python ≤3.12 for TensorFlow compatibility

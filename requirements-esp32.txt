@@ -1,13 +1,14 @@
-# ESP32 Development Dependencies
+# ESP32 Development Dependencies - Latest Versions
 # For ESP32-P4-Eye deployment and firmware development
+# Updated January 2025 with latest stable versions
 
 -r requirements.txt
 
-# ESP32 Development Tools
-platformio>=6.1.0
-thop>=0.1.1
+# ESP32 Development Tools - Latest versions
+platformio>=6.3.0
+thop>=0.1.2
 
-# Model Analysis
+# Model Analysis - Latest versions
 torchsummary>=1.5.1
 
 # Installation Notes:

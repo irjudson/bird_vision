@@ -1,13 +1,14 @@
-# TensorFlow Lite / LiteRT Dependencies
+# TensorFlow Lite / LiteRT Dependencies - Latest Versions
 # For mobile and edge deployment using TensorFlow Lite models
+# Updated January 2025 with latest stable versions
 
 -r requirements.txt
 
-# LiteRT (formerly TensorFlow Lite)
-ai-edge-litert>=1.0.0
+# LiteRT (formerly TensorFlow Lite) - Latest stable
+ai-edge-litert>=1.1.0
 
-# Direct PyTorch to TFLite conversion (optional, experimental)
-# ai-edge-torch>=0.1.0
+# Direct PyTorch to TFLite conversion - Latest version
+ai-edge-torch>=0.2.0
 
 # Installation Notes:
 # 1. TensorFlow Lite has been rebranded to LiteRT (Lite Runtime)

@@ -1,18 +1,19 @@
-# Raspberry Pi Specific Dependencies
+# Raspberry Pi Specific Dependencies - Latest Versions
 # For deployment on Raspberry Pi devices with camera support
+# Updated January 2025 with latest stable versions
 
 -r requirements.txt
 
-# Raspberry Pi Camera (only install on ARM devices)
+# Raspberry Pi Camera - Latest versions (only install on ARM devices)
 # Note: These require platform_machine to be 'armv7l' or 'aarch64'
-picamera2>=0.3.0; platform_machine=="armv7l" or platform_machine=="aarch64"
-libcamera>=0.3.0; platform_machine=="armv7l" or platform_machine=="aarch64"
+picamera2>=0.3.25; platform_machine=="armv7l" or platform_machine=="aarch64"
+libcamera>=0.4.0; platform_machine=="armv7l" or platform_machine=="aarch64"
 
-# Raspberry Pi GPIO (only install on ARM devices)
-rpi-gpio>=0.7.0; platform_machine=="armv7l" or platform_machine=="aarch64"
+# Raspberry Pi GPIO - Latest versions (only install on ARM devices)
+rpi-gpio>=0.7.1; platform_machine=="armv7l" or platform_machine=="aarch64"
 pigpio>=1.78; platform_machine=="armv7l" or platform_machine=="aarch64"
 
-# Hardware monitoring
+# Hardware monitoring - Latest version
 GPUtil>=1.4.0
 
 # Installation Notes:
