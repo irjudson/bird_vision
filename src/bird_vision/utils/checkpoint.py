@@ -97,6 +97,6 @@ class CheckpointManager:
         """Get path to the last checkpoint."""
         return self.last_checkpoint_path
     
-    def list_checkpoints(self) -> List[Path]:
+    def list_checkpoints(self) -> list[Path]:
         """List all available checkpoints."""
         return list(self.checkpoints_dir.glob("*.ckpt"))
