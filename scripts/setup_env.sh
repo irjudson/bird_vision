@@ -36,7 +36,10 @@ command_exists() {
 
 # Function to detect Python version
 detect_python() {
-    if command_exists python3.11; then
+    if command_exists python3.12; then
+        echo "python3.12"
+  #  if command_exists python3.11; then
+    elif command_exists python3.11; then
         echo "python3.11"
     elif command_exists python3.10; then
         echo "python3.10"

@@ -79,7 +79,7 @@ dev = [
     
     # Development Environment
     "jupyter>=1.1.0",
-    "ipykernel>=7.0.0",  # Latest version with Python 3.13 support
+    "ipykernel>=6.30.0a0",
 ]
 mobile = [
     "torch-mobile>=0.1.0",
